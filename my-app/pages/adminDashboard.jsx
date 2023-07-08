@@ -105,6 +105,7 @@ function adminDashboard() {
                     (can) =>
                       can.electionId === doc.id && (
                         <Card
+                          contract = {{}}
                           key={can.uId}
                           Name={can.Name}
                           role={can.Role}

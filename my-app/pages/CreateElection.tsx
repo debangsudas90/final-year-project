@@ -73,6 +73,8 @@ function create_vote() {
       id: eId,
       duration: dateValue.format()
     });
+    
+    //candidates docuemnt
     cardDetails.map((p) => {
       setDoc(doc(db, `Elections/${eId}/Candidates`, uuid()), {
         Name: p.Name,
@@ -80,7 +82,6 @@ function create_vote() {
         Role: p.Role,
         Image: p.Image,
         uId: uuid(),
-        count: [],
         electionId: eId
       });
     });
@@ -94,7 +95,7 @@ function create_vote() {
 
   const handleModalTwoSubmit = (e: any) => {
     e.preventDefault();
-    console.log(formData);
+    // console.log(formData);
     setShowModalTwo(false);
   };
   return (

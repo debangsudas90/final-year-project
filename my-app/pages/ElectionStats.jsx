@@ -16,6 +16,9 @@ import Box from '@mui/material/Box';
 import { db } from '../utils/Firebase';
 import { Divider } from '@mui/material';
 
+import abi from "../contract/artifact/contracts/new_vote.sol/new_vote.json";
+import { ethers } from "ethers";
+
 import {
   Chart as ChartJS,
   ArcElement,
@@ -35,16 +38,29 @@ function ElectionStats() {
 
   const [open, setOpen] = useState(false);
   const [winner, setWinner] = useState("");
+  const [candidate, setCandidate] = useState([{
+    name: null,
+    votes: null
+  }])
+  const [state, setState] = useState({
+    provide: null,
+    signer: null,
+    contract: null,
+  });
+  const [account, setAccount] = useState("None");
+  const [cardDetails, setCardDetails] = useState([]);
+  const [elections,setElections]=useState([]);
+
   const handleOpen = () => {
     setOpen(true)
-    candidates.forEach((candidate) => {
+    candidate.forEach((candidate) => {
       if(candidate.votes == maxVotes) {
-        console.log("working")
+        // console.log("working")
         setWinner(candidate.name)
       }
     })
   };
-  const handleClose = () => setOpen(false);
+  const handleClose = () => setOpen(false); 
 
   //Modal styles
   const style = {
@@ -62,9 +78,6 @@ function ElectionStats() {
 
   //fetch candidate details
 
-  const [cardDetails, setCardDetails] = useState([]);
-  const [elections,setElections]=useState([]);
-
   const electionQuery=collection(db,'Elections');
   useEffect(()=>{
    
@@ -80,23 +93,71 @@ function ElectionStats() {
           ...doc.data(), id:doc.id
       }))
       setCardDetails(candidates);
+      console.log("happens1")
     })
     }
     getElections();
   },[])
 
-  const candidates = cardDetails.map((can) => ({
-    name: can.Name,
-    votes: can.count.length
-  }));
+  //contract instance
+  useEffect(() => {
+    
+    const connectWallet = async () => {
+      try {
+        const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+        const contractABI = abi.abi;
+        const provide = new ethers.providers.Web3Provider(ethereum);
+        const signer = provide.getSigner();
+        const contract = new ethers.Contract(
+          contractAddress,
+          contractABI,
+          signer
+        );
+        const account = await ethereum.request({
+          method: "eth_requestAccounts"
+        })
+        setAccount(account);
+        setState({ provide, signer, contract });
 
-  const votesArray = candidates.map((candidate) => candidate.votes);
-  const candidateArray = candidates.map((candidate) => candidate.name);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    connectWallet()
+    
+  }, [])
+
+
+  //getting count of candidates
+  useEffect(() => {
+    
+    const candidateList = async() => {
+      const candi = await Promise.all(cardDetails.map(async (can) => {
+        const votes = await state.contract.getCountOfVotes(can.id);
+        return {
+          name: can.Name,
+          votes: votes.toNumber() // Convert the BigNumber to a JavaScript number
+        };
+      }));
+      console.log(candi)
+      setCandidate(candi)
+      console.log("happens2")
+    }
+
+    cardDetails && candidateList()
+    // test()
+
+  }, [cardDetails, state.contract])
+
+
+  const votesArray = candidate.map((candidate) => candidate.votes);
+  const candidateArray = candidate.map((candidate) => candidate.name);
   const maxVotes = Math.max(...votesArray);
   console.log(maxVotes)
 
   // Calculate total votes
-  const totalVotes = candidates.reduce((acc, curr) => acc + curr.votes, 0);
+  const totalVotes = candidate.reduce((acc, curr) => acc + curr.votes, 0);
 
   //chartjs
 
