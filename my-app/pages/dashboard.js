@@ -23,6 +23,7 @@ function dashboard() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [cardDetails, setCardDetails] = useState([[]]);
   const [elections, setElections] = useState([]);
+  const [disabled, setDisabled] = useState(false);
 
   const [state, setState] = useState({
     provide: null,
@@ -103,6 +104,10 @@ function dashboard() {
         contractABI,
         signer
       );
+      const account = await ethereum.request({
+        method: "eth_requestAccounts"
+      })
+
       setAccount(account);
       setState({ provide, signer, contract });
 
@@ -110,7 +115,7 @@ function dashboard() {
       setWalletConnected(1);
       localStorage.setItem("walletConnected", 1);
     } catch (err) {
-      console.error(err);
+      alert(err);
     }
   };
 
@@ -120,6 +125,17 @@ function dashboard() {
     
   };
 
+  useEffect(() => {
+    window.ethereum.on("accountsChanged", () => {
+      alert("Dont change accounts!!")
+      alert("You have been disconnected!!")
+      setDisabled(true)
+      localStorage.setItem("walletConnected", 1);
+    })
+  
+  }, [account])
+  
+
   const renderButton = () => {
     const connected = Number(localStorage.getItem("walletConnected"));
     return (
@@ -127,6 +143,7 @@ function dashboard() {
         className="bg-[#bd3fb8] mt-[1px] fixed px-6 py-2 rounded-xl
       text-white font-semibold text-sm top-4 z-50 right-[10rem]"
         onClick={connected ? disconnectWallet : connectWallet}
+        disabled={disabled}
       >
         {connected ? "Disconnect Wallet" : "Connect Wallet"}
       </button>

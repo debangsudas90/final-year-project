@@ -38,10 +38,7 @@ function ElectionStats() {
 
   const [open, setOpen] = useState(false);
   const [winner, setWinner] = useState("");
-  const [candidate, setCandidate] = useState([{
-    name: null,
-    votes: null
-  }])
+  const [candidate, setCandidate] = useState([])
   const [state, setState] = useState({
     provide: null,
     signer: null,
@@ -81,23 +78,31 @@ function ElectionStats() {
   const electionQuery=collection(db,'Elections');
   useEffect(()=>{
    
-    const getElections=async()=>{
-      const getElections=await getDocs(electionQuery);
-      const elections = getElections.docs.map((doc)=>({
-        ...doc.data(), id:doc.id
-    }))
+    const getElections = async () => {
+      const getElections = await getDocs(electionQuery);
+      const elections = getElections.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
       setElections(elections);
-      elections.map(async (election)=>{
-        const getCandidates=await getDocs(collection(db,'Elections',election.id,'Candidates'));
-        const candidates = getCandidates.docs.map((doc)=>({
-          ...doc.data(), id:doc.id
-      }))
-      setCardDetails(candidates);
-      console.log("happens1")
-    })
-    }
+      elections.map(async (election) => {
+        const getCandidates = await getDocs(
+          collection(db, "Elections", election.id, "Candidates")
+        );
+        // console.log("election", election.id);
+        const candidates = getCandidates.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        setCardDetails((prev) => [...prev, ...candidates]);
+        // console.log("candidates", candidates);
+      });
+    };
     getElections();
   },[])
+
+  // console.log(elections)
+  // console.log(cardDetails)
 
   //contract instance
   useEffect(() => {
@@ -129,57 +134,79 @@ function ElectionStats() {
   }, [])
 
 
-  //getting count of candidates
+  // getting count of candidates
   useEffect(() => {
+
+    // const votelist = await state.contract.getCountOfVotes("c1761f5b-f481-4924-b011-08b984c653aa","c1fd886c-a6b0-4fd8-a283-84f3055c99e9");
+    // console.log(JSON.parse(votelist))
     
-    const candidateList = async() => {
-      const candi = await Promise.all(cardDetails.map(async (can) => {
-        const votes = await state.contract.getCountOfVotes(can.id);
-        return {
-          name: can.Name,
-          votes: votes.toNumber() // Convert the BigNumber to a JavaScript number
-        };
-      }));
-      console.log(candi)
-      setCandidate(candi)
-      console.log("happens2")
-    }
+    const candidateList = async () => {
+
+      const candidateData = {};
+      
+      await Promise.all(
+        elections.map(async (doc) => {
+          console.log(doc.id);
+
+          const candi = await Promise.all(
+            cardDetails.map(async (can) => {
+              if (can.electionId === doc.id) {
+                const votes = await state.contract.getCountOfVotes(can.id, doc.id);
+                return {
+                  name: can.Name,
+                  votes: votes.toNumber()
+                };
+              }
+            })
+          );
+
+          console.log(candi);
+          candidateData[doc.id] = candi.filter((c) => c !== undefined);
+        })
+      );
+
+      // console.log(candidateData);
+      setCandidate(candidateData);
+    };
 
     cardDetails && candidateList()
-    // test()
 
-  }, [cardDetails, state.contract])
+  }, [elections, cardDetails, state.contract])
 
+  console.log(candidate)
 
-  const votesArray = candidate.map((candidate) => candidate.votes);
-  const candidateArray = candidate.map((candidate) => candidate.name);
-  const maxVotes = Math.max(...votesArray);
-  console.log(maxVotes)
+  // const votesArray = candidate.map((candidate) => candidate.votes);
+  // const candidateArray = candidate.map((candidate) => candidate.name);
+  // const maxVotes = Math.max(...votesArray);
+//   console.log(maxVotes)
 
   // Calculate total votes
-  const totalVotes = candidate.reduce((acc, curr) => acc + curr.votes, 0);
+  const totalVotes = (eid) => {
+    return candidate[eid].reduce((acc, curr) => acc + curr.votes, 0)
+  }
 
   //chartjs
 
-  const getRandomVioletColor = () => {
-    const minHue = 260; // Minimum hue for violet
-    const maxHue = 300; // Maximum hue for violet
-    const saturation = Math.floor(Math.random() * 51) + 50; // Random saturation value between 50 and 100
-    const lightness = Math.floor(Math.random() * 21) + 40; // Random lightness value between 40 and 60
-    const hue = Math.floor(Math.random() * (maxHue - minHue + 1)) + minHue; // Random hue value within the violet range
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const getRandomVioletColor = (count) => {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      const color = `hsl(${Math.floor(Math.random() * 361)}, 60%, 50%)`;
+      colors.push(color);
+    }
+    return colors;
   };
   
-  const data = {
-    labels: candidateArray,
-    datasets: [{
-      label: 'Votes',
-      data: votesArray,
-      backgroundColor: candidateArray.map(() => getRandomVioletColor()),
-      borderColor: ['#93278F']
-    }]
-    
-  }
+  const chartData = Object.keys(candidate).map((eid, index) => ({
+    labels: candidate[eid].map((candi) => candi.name),
+    datasets: [
+      {
+        data: candidate[eid].map((candi) => candi.votes),
+        backgroundColor: getRandomVioletColor(candidate[eid].length),
+        borderColor: '#93278F',
+      },
+    ],
+    electionTitle: elections.find((doc) => doc.id === eid).title,
+  }));
 
   const options = {
     responsive: true
@@ -210,63 +237,18 @@ function ElectionStats() {
           Election Stats
         </Typography>
         <Divider />
-        <Typography variant="h6" component="h2" align = "center" sx={{ color:"#2F0745", fontWeight: "bold", mt:"10px", mb: "20px"}} gutterBottom>
-          {elections[0]?.title}
-        </Typography>
-        {/* <Grid container spacing={3}>
-          {candidates.map((candidate) => (
-            <Grid item xs={12} key={candidate.name}>
-              <Typography variant="h6" component="p" sx={{color: "#2F0745", fontWeight: "bold"}}>
-                {candidate.name}
-              </Typography>
-              <Typography variant="subtitle1" component="p">
-                {candidate.votes} votes ({((candidate.votes / totalVotes) * 100).toFixed(2)}%)
-              </Typography>
-              <LinearProgress variant="determinate" color="secondary" value={(candidate.votes / totalVotes) * 100} style={{ backgroundColor: '#e0e0e0', height:"15px" }}>
-                <span style={{ color: candidate.color }}>{((candidate.votes / totalVotes) * 100).toFixed(2)}%</span>
-              </LinearProgress>
-            </Grid>
-          ))}
-        </Grid> */}
-      <div style={{width: "30%", height: "30%", margin: "0 auto", paddingLeft: "40px"}}>
-        <Doughnut
-          data={data}
-          options={options}
-        >
-
-        </Doughnut>
-      </div>
-
+        {/* multiple vote support */}
+        {chartData.map((data, index) => (
+        <div key={index} className="chart-container" style={{width: "30%", height: "30%", margin: "0 auto", paddingLeft: "40px"}}>
+          <Typography variant="h6" component="h2" align = "center" sx={{ color:"#2F0745", fontWeight: "bold", mt:"10px", mb: "20px"}} gutterBottom>
+              {data.electionTitle}
+            </Typography>
+          <Doughnut data={data} options={options} className='mb-4'/>
+          <Divider />
+        </div>
+      ))}
       </CardContent>
       
-      <Box textAlign="center">
-      <Button onClick={handleOpen} class="bg-[#93278F] text-white px-8 py-3
-        hover:bg-[#5c0f59] text-sm rounded-xl ml-16 m-6">View Results</Button>
-      </Box>
-      <Modal
-        aria-labelledby="transition-modal-title"
-        aria-describedby="transition-modal-description"
-        open={open}
-        onClose={handleClose}
-        closeAfterTransition
-        slots={{ backdrop: Backdrop }}
-        slotProps={{
-          backdrop: {
-            timeout: 500,
-          },
-        }}
-      >
-        <Fade in={open}>
-          <Box sx={style}>
-            <Typography id="transition-modal-title" variant="h6" component="h2" sx={{ color:"#93278F", fontWeight: "bold", mb:"20px"}} gutterBottom>
-              Winner!!
-            </Typography>
-            <Typography id="transition-modal-description" variant="subtitle-1" component="p" sx={{color: "#2F0745", fontWeight: "bold"}}>
-              Candidate {winner.toUpperCase()} with {maxVotes} votes
-            </Typography>
-          </Box>
-        </Fade>
-      </Modal>
 
     </Card>
 

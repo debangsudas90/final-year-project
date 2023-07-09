@@ -13,14 +13,17 @@ function Card({ state, walletConnected, Name, role, indx, eid, title, Email }) {
 
   useEffect(() => {
     const storage = getStorage();
-    const storageRef = ref(storage, `${Name}.jpg`);
-    // console.log(storageRef);
-      let url = getDownloadURL(storageRef);
-      url.then((result) => {
-          setImageUrl(result);
-      }).catch(err => {
-        console.log(err)
-      })
+    try {
+      const storageRef = ref(storage, `${Name}.jpg`);
+        let url = getDownloadURL(storageRef);
+        url.then((result) => {
+            setImageUrl(result);
+        }).catch(err => {
+          console.log(err)
+        })
+    } catch (error) {
+      console.log(error)
+    }
   
     //check if user has voted
     const checkVoted = async () => {
@@ -66,12 +69,12 @@ function Card({ state, walletConnected, Name, role, indx, eid, title, Email }) {
       //indx is the candidate id created by firebase
       const transaction = await contract.giveVote(indx, eid);
       await transaction.wait();
-      const noOfVotes = await contract.getCountOfVotes(indx);
-      console.log("no of votes",indx,":", noOfVotes.toString());
+      const noOfVotes = await contract.getCountOfVotes(indx,eid);
+      console.log(eid,":","no of votes",indx,":", noOfVotes.toString());
       alert("Successfully Voted for " + Name);
-
+      
     } catch (err) {
-        alert("You have already voted!") 
+      alert("You have already voted!")
     }
 
     setIsButtonDisabled(true);
