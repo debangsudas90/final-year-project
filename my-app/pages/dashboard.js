@@ -124,16 +124,6 @@ function dashboard() {
     localStorage.setItem("walletConnected", 0);
     
   };
-
-  useEffect(() => {
-    window.ethereum.on("accountsChanged", () => {
-      alert("Dont change accounts!!")
-      alert("You have been disconnected!!")
-      setDisabled(true)
-      localStorage.setItem("walletConnected", 1);
-    })
-  
-  }, [account])
   
 
   const renderButton = () => {

@@ -36,7 +36,7 @@ ChartJS.register(
 
 function ElectionStats() {
 
-  const [open, setOpen] = useState(false);
+  const [show, setShow] = useState({name: null, open: true});
   const [winner, setWinner] = useState("");
   const [candidate, setCandidate] = useState([])
   const [state, setState] = useState({
@@ -46,18 +46,7 @@ function ElectionStats() {
   });
   const [account, setAccount] = useState("None");
   const [cardDetails, setCardDetails] = useState([]);
-  const [elections,setElections]=useState([]);
-
-  const handleOpen = () => {
-    setOpen(true)
-    candidate.forEach((candidate) => {
-      if(candidate.votes == maxVotes) {
-        // console.log("working")
-        setWinner(candidate.name)
-      }
-    })
-  };
-  const handleClose = () => setOpen(false); 
+  const [elections,setElections]=useState([]); 
 
   //Modal styles
   const style = {
@@ -150,12 +139,16 @@ function ElectionStats() {
 
           const candi = await Promise.all(
             cardDetails.map(async (can) => {
-              if (can.electionId === doc.id) {
-                const votes = await state.contract.getCountOfVotes(can.id, doc.id);
-                return {
-                  name: can.Name,
-                  votes: votes.toNumber()
-                };
+              try {
+                if (can.electionId === doc.id) {
+                  const votes = await state.contract.getCountOfVotes(can.id, doc.id);
+                  return {
+                    name: can.Name,
+                    votes: votes.toNumber()
+                  };
+                }
+              } catch (error) {
+                console.log(error)
               }
             })
           );
@@ -212,6 +205,17 @@ function ElectionStats() {
     responsive: true
   }
 
+  const handleOpen = async(name) => {
+    const length = await elections.length
+    for (let index = 0; index < length; index++) {
+      if(elections[index].title === name){
+        setShow({name: name, open: name === show.name ? !show.open : show.open})
+      }
+      
+      
+    }
+  }
+
   return (
     <div className="flex w-screen m-0  h-screen">
       <Sidebar/>
@@ -239,11 +243,33 @@ function ElectionStats() {
         <Divider />
         {/* multiple vote support */}
         {chartData.map((data, index) => (
-        <div key={index} className="chart-container" style={{width: "30%", height: "30%", margin: "0 auto", paddingLeft: "40px"}}>
-          <Typography variant="h6" component="h2" align = "center" sx={{ color:"#2F0745", fontWeight: "bold", mt:"10px", mb: "20px"}} gutterBottom>
-              {data.electionTitle}
-            </Typography>
-          <Doughnut data={data} options={options} className='mb-4'/>
+        <div key={index} className="chart-container" style={{
+          width: "30%", 
+          height: "30%", 
+          margin: "0 auto", 
+          paddingLeft: "40px"
+          }}
+        >
+          <Typography variant="h6" component="h2" align = "center" sx={{ 
+            color:"#2F0745", 
+            fontWeight: "bold", 
+            mt:"10px", 
+            mb: "20px"
+            }}
+            gutterBottom
+            onClick={() => setShow(() => handleOpen(data.electionTitle))}
+          >
+            {data.electionTitle}
+          </Typography>
+          {console.log(show)}
+          {show.name === data.electionTitle && show.open &&
+          <Doughnut 
+            data={data} 
+            options={options} 
+            className="mb-4"
+          />
+          }
+          
           <Divider />
         </div>
       ))}
@@ -251,6 +277,7 @@ function ElectionStats() {
       
 
     </Card>
+      
 
         
         
