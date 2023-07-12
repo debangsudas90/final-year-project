@@ -16,7 +16,6 @@ function login() {
 
   const { signIn, signUp } = useAuth();
   const { user, loading } = useAuth();
-  // console.log(user);
   const {
     register,
     handleSubmit,

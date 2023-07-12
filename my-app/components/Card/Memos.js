@@ -7,7 +7,6 @@ const Memos = ({ state }) => {
       const memosMessage = async () => {
         const memos = await contract.getVotes();
         setMemos(memos);
-        console.log(memos);
       };
       contract && memosMessage();
     }, [contract]);

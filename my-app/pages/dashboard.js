@@ -23,6 +23,7 @@ function dashboard() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [cardDetails, setCardDetails] = useState([[]]);
   const [elections, setElections] = useState([]);
+  const [disabled, setDisabled] = useState(false);
 
   const [state, setState] = useState({
     provide: null,
@@ -57,22 +58,18 @@ function dashboard() {
         const getCandidates = await getDocs(
           collection(db, "Elections", election.id, "Candidates")
         );
-        console.log("election", election.id);
         const candidates = getCandidates.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         }));
         setCardDetails((prev) => [...prev, ...candidates]);
-        console.log("candidates", candidates);
       });
     };
     getElections();
     renderButton();
   }, []);
 
-  console.log("CardDetails", cardDetails);
 
-  //console.log(elections);
   const getProviderOrSigner = async (needSigner = false) => {
     const provider = await web3ModalRef.current.connect();
     const web3Provider = new providers.Web3Provider(provider);
@@ -94,7 +91,7 @@ function dashboard() {
 
   const connectWallet = async () => {
     try {
-      const contractAddress = "0x544624eF5A590E802817CFfe1dDA655260c4E914";
+      const contractAddress = "0xB27DdE2920782f624D1be776D1Cf3B5bE6696fdC";
       const contractABI = abi.abi;
       const provide = new ethers.providers.Web3Provider(ethereum);
       const signer = provide.getSigner();
@@ -103,6 +100,10 @@ function dashboard() {
         contractABI,
         signer
       );
+      const account = await ethereum.request({
+        method: "eth_requestAccounts"
+      })
+
       setAccount(account);
       setState({ provide, signer, contract });
 
@@ -110,7 +111,7 @@ function dashboard() {
       setWalletConnected(1);
       localStorage.setItem("walletConnected", 1);
     } catch (err) {
-      console.error(err);
+      alert(err);
     }
   };
 
@@ -119,6 +120,7 @@ function dashboard() {
     localStorage.setItem("walletConnected", 0);
     
   };
+  
 
   const renderButton = () => {
     const connected = Number(localStorage.getItem("walletConnected"));
@@ -127,6 +129,7 @@ function dashboard() {
         className="bg-[#bd3fb8] mt-[1px] fixed px-6 py-2 rounded-xl
       text-white font-semibold text-sm top-4 z-50 right-[10rem]"
         onClick={connected ? disconnectWallet : connectWallet}
+        disabled={disabled}
       >
         {connected ? "Disconnect Wallet" : "Connect Wallet"}
       </button>

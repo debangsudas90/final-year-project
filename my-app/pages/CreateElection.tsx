@@ -53,7 +53,6 @@ function create_vote() {
 
     const handleDateChange = (newValue: any) => {
         setDateValue(newValue);
-        console.log(newValue, "ehere")
         // handleChange(newValue);
     }
 
@@ -64,7 +63,6 @@ function create_vote() {
     const qdata = querySnapshot.docs.map((doc: { data: () => any }) =>
       doc.data()
     );
-    console.log(qdata);
     const eId = uuid();
     setDoc(doc(db, `Elections`, eId), {
       title: formData.title,
@@ -73,6 +71,8 @@ function create_vote() {
       id: eId,
       duration: dateValue.format()
     });
+    
+    //candidates docuemnt
     cardDetails.map((p) => {
       setDoc(doc(db, `Elections/${eId}/Candidates`, uuid()), {
         Name: p.Name,
@@ -80,7 +80,6 @@ function create_vote() {
         Role: p.Role,
         Image: p.Image,
         uId: uuid(),
-        count: [],
         electionId: eId
       });
     });
@@ -94,7 +93,6 @@ function create_vote() {
 
   const handleModalTwoSubmit = (e: any) => {
     e.preventDefault();
-    console.log(formData);
     setShowModalTwo(false);
   };
   return (

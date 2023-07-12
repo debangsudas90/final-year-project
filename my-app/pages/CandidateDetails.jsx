@@ -2,7 +2,6 @@ import { useRouter } from "next/router";
 function CandidateDetails() {
   const router = useRouter();
   const { name, role, title, image, email } = router.query;
-  console.log(image);
 
   //campaign speech random
   const campaignSpeeches = [

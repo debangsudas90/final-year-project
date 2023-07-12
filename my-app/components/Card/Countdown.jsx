@@ -10,8 +10,6 @@ const Countdown = ({targetDate}) => {
 
   useEffect(() => {
     const targetDatetime = dayjs(targetDate); // Set your target datetime here
-    // console.log(targetDatetime, "here")
-    console.log(dayjs().diff(targetDatetime), "here1")
 
     const interval = setInterval(() => {
       const currentDatetime = dayjs(); // Get the current datetime

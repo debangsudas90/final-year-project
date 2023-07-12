@@ -1,20 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { collection, doc, getDocs, getFirestore, onSnapshot, query, setDoc } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 
 import Sidebar from '../components/Sidebar/Sidebar';
-import AdminSidebar from '../components/Sidebar/AdminSidebar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import LinearProgress from '@mui/material/LinearProgress';
-import Button from '@mui/material/Button';
-import Modal from '@mui/material/Modal';
-import Backdrop from '@mui/material/Backdrop';
-import Fade from '@mui/material/Fade';
-import Box from '@mui/material/Box';
 import { db } from '../utils/Firebase';
 import { Divider } from '@mui/material';
+
+import abi from "../contract/new_vote.json";
+import { ethers } from "ethers";
 
 import {
   Chart as ChartJS,
@@ -33,18 +28,17 @@ ChartJS.register(
 
 function ElectionStats() {
 
-  const [open, setOpen] = useState(false);
+  const [show, setShow] = useState({name: null, open: true});
   const [winner, setWinner] = useState("");
-  const handleOpen = () => {
-    setOpen(true)
-    candidates.forEach((candidate) => {
-      if(candidate.votes == maxVotes) {
-        console.log("working")
-        setWinner(candidate.name)
-      }
-    })
-  };
-  const handleClose = () => setOpen(false);
+  const [candidate, setCandidate] = useState([])
+  const [state, setState] = useState({
+    provide: null,
+    signer: null,
+    contract: null,
+  });
+  const [account, setAccount] = useState("None");
+  const [cardDetails, setCardDetails] = useState([]);
+  const [elections,setElections]=useState([]); 
 
   //Modal styles
   const style = {
@@ -62,66 +56,139 @@ function ElectionStats() {
 
   //fetch candidate details
 
-  const [cardDetails, setCardDetails] = useState([]);
-  const [elections,setElections]=useState([]);
-
   const electionQuery=collection(db,'Elections');
   useEffect(()=>{
    
-    const getElections=async()=>{
-      const getElections=await getDocs(electionQuery);
-      const elections = getElections.docs.map((doc)=>({
-        ...doc.data(), id:doc.id
-    }))
+    const getElections = async () => {
+      const getElections = await getDocs(electionQuery);
+      const elections = getElections.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
       setElections(elections);
-      elections.map(async (election)=>{
-        const getCandidates=await getDocs(collection(db,'Elections',election.id,'Candidates'));
-        const candidates = getCandidates.docs.map((doc)=>({
-          ...doc.data(), id:doc.id
-      }))
-      setCardDetails(candidates);
-    })
-    }
+      elections.map(async (election) => {
+        const getCandidates = await getDocs(
+          collection(db, "Elections", election.id, "Candidates")
+        );
+        const candidates = getCandidates.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        setCardDetails((prev) => [...prev, ...candidates]);
+      });
+    };
     getElections();
   },[])
 
-  const candidates = cardDetails.map((can) => ({
-    name: can.Name,
-    votes: can.count.length
-  }));
 
-  const votesArray = candidates.map((candidate) => candidate.votes);
-  const candidateArray = candidates.map((candidate) => candidate.name);
-  const maxVotes = Math.max(...votesArray);
-  console.log(maxVotes)
+  //contract instance
+  useEffect(() => {
+    
+    const connectWallet = async () => {
+      try {
+        const contractAddress = "0xB27DdE2920782f624D1be776D1Cf3B5bE6696fdC";
+        const contractABI = abi.abi;
+        const provide = new ethers.providers.Web3Provider(ethereum);
+        const signer = provide.getSigner();
+        const contract = new ethers.Contract(
+          contractAddress,
+          contractABI,
+          signer
+        );
+        const account = await ethereum.request({
+          method: "eth_requestAccounts"
+        })
+        setAccount(account);
+        setState({ provide, signer, contract });
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    connectWallet()
+    
+  }, [])
+
+
+  // getting count of candidates
+  useEffect(() => {
+
+    const candidateList = async () => {
+
+      const candidateData = {};
+      
+      await Promise.all(
+        elections.map(async (doc) => {
+          const candi = await Promise.all(
+            cardDetails.map(async (can) => {
+              try {
+                if (can.electionId === doc.id) {
+                  const votes = await state.contract.getCountOfVotes(can.id, doc.id);
+                  return {
+                    name: can.Name,
+                    votes: votes.toNumber()
+                  };
+                }
+              } catch (error) {
+                console.log(error)
+              }
+            })
+          );
+
+          candidateData[doc.id] = candi.filter((c) => c !== undefined);
+        })
+      );
+
+      setCandidate(candidateData);
+    };
+
+    cardDetails && candidateList()
+
+  }, [elections, cardDetails, state.contract])
+
 
   // Calculate total votes
-  const totalVotes = candidates.reduce((acc, curr) => acc + curr.votes, 0);
+  const totalVotes = (eid) => {
+    return candidate[eid].reduce((acc, curr) => acc + curr.votes, 0)
+  }
 
   //chartjs
 
-  const getRandomVioletColor = () => {
-    const minHue = 260; // Minimum hue for violet
-    const maxHue = 300; // Maximum hue for violet
-    const saturation = Math.floor(Math.random() * 51) + 50; // Random saturation value between 50 and 100
-    const lightness = Math.floor(Math.random() * 21) + 40; // Random lightness value between 40 and 60
-    const hue = Math.floor(Math.random() * (maxHue - minHue + 1)) + minHue; // Random hue value within the violet range
-    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const getRandomVioletColor = (count) => {
+    const colors = [];
+    for (let i = 0; i < count; i++) {
+      const color = `hsl(${Math.floor(Math.random() * 361)}, 60%, 50%)`;
+      colors.push(color);
+    }
+    return colors;
   };
   
-  const data = {
-    labels: candidateArray,
-    datasets: [{
-      label: 'Votes',
-      data: votesArray,
-      backgroundColor: candidateArray.map(() => getRandomVioletColor()),
-      borderColor: ['#93278F']
-    }]
-    
-  }
+  const chartData = Object.keys(candidate).map((eid, index) => ({
+    labels: candidate[eid].map((candi) => candi.name),
+    datasets: [
+      {
+        data: candidate[eid].map((candi) => candi.votes),
+        backgroundColor: getRandomVioletColor(candidate[eid].length),
+        borderColor: '#93278F',
+      },
+    ],
+    electionTitle: elections.find((doc) => doc.id === eid).title,
+  }));
 
   const options = {
     responsive: true
+  }
+
+  const handleOpen = async(name) => {
+    const length = await elections.length
+    for (let index = 0; index < length; index++) {
+      if(elections[index].title === name){
+        setShow({name: name, open: name === show.name ? !show.open : show.open})
+      }
+      
+      
+    }
   }
 
   return (
@@ -149,65 +216,42 @@ function ElectionStats() {
           Election Stats
         </Typography>
         <Divider />
-        <Typography variant="h6" component="h2" align = "center" sx={{ color:"#2F0745", fontWeight: "bold", mt:"10px", mb: "20px"}} gutterBottom>
-          {elections[0]?.title}
-        </Typography>
-        {/* <Grid container spacing={3}>
-          {candidates.map((candidate) => (
-            <Grid item xs={12} key={candidate.name}>
-              <Typography variant="h6" component="p" sx={{color: "#2F0745", fontWeight: "bold"}}>
-                {candidate.name}
-              </Typography>
-              <Typography variant="subtitle1" component="p">
-                {candidate.votes} votes ({((candidate.votes / totalVotes) * 100).toFixed(2)}%)
-              </Typography>
-              <LinearProgress variant="determinate" color="secondary" value={(candidate.votes / totalVotes) * 100} style={{ backgroundColor: '#e0e0e0', height:"15px" }}>
-                <span style={{ color: candidate.color }}>{((candidate.votes / totalVotes) * 100).toFixed(2)}%</span>
-              </LinearProgress>
-            </Grid>
-          ))}
-        </Grid> */}
-      <div style={{width: "30%", height: "30%", margin: "0 auto", paddingLeft: "40px"}}>
-        <Doughnut
-          data={data}
-          options={options}
+        {/* multiple vote support */}
+        {chartData.map((data, index) => (
+        <div key={index} className="chart-container" style={{
+          width: "30%", 
+          height: "30%", 
+          margin: "0 auto", 
+          paddingLeft: "40px"
+          }}
         >
-
-        </Doughnut>
-      </div>
-
+          <Typography variant="h6" component="h2" align = "center" sx={{ 
+            color:"#2F0745", 
+            fontWeight: "bold", 
+            mt:"10px", 
+            mb: "20px"
+            }}
+            gutterBottom
+            onClick={() => setShow(() => handleOpen(data.electionTitle))}
+          >
+            {data.electionTitle}
+          </Typography>
+          {show.name === data.electionTitle && show.open &&
+          <Doughnut 
+            data={data} 
+            options={options} 
+            className="mb-4"
+          />
+          }
+          
+          <Divider />
+        </div>
+      ))}
       </CardContent>
       
-      <Box textAlign="center">
-      <Button onClick={handleOpen} class="bg-[#93278F] text-white px-8 py-3
-        hover:bg-[#5c0f59] text-sm rounded-xl ml-16 m-6">View Results</Button>
-      </Box>
-      <Modal
-        aria-labelledby="transition-modal-title"
-        aria-describedby="transition-modal-description"
-        open={open}
-        onClose={handleClose}
-        closeAfterTransition
-        slots={{ backdrop: Backdrop }}
-        slotProps={{
-          backdrop: {
-            timeout: 500,
-          },
-        }}
-      >
-        <Fade in={open}>
-          <Box sx={style}>
-            <Typography id="transition-modal-title" variant="h6" component="h2" sx={{ color:"#93278F", fontWeight: "bold", mb:"20px"}} gutterBottom>
-              Winner!!
-            </Typography>
-            <Typography id="transition-modal-description" variant="subtitle-1" component="p" sx={{color: "#2F0745", fontWeight: "bold"}}>
-              Candidate {winner.toUpperCase()} with {maxVotes} votes
-            </Typography>
-          </Box>
-        </Fade>
-      </Modal>
 
     </Card>
+      
 
         
         
