@@ -53,7 +53,6 @@ function create_vote() {
 
     const handleDateChange = (newValue: any) => {
         setDateValue(newValue);
-        console.log(newValue, "ehere")
         // handleChange(newValue);
     }
 
@@ -64,7 +63,6 @@ function create_vote() {
     const qdata = querySnapshot.docs.map((doc: { data: () => any }) =>
       doc.data()
     );
-    console.log(qdata);
     const eId = uuid();
     setDoc(doc(db, `Elections`, eId), {
       title: formData.title,
@@ -95,7 +93,6 @@ function create_vote() {
 
   const handleModalTwoSubmit = (e: any) => {
     e.preventDefault();
-    // console.log(formData);
     setShowModalTwo(false);
   };
   return (

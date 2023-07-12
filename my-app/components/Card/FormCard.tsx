@@ -20,8 +20,6 @@ const FormCard = () => {
   const { cardDetails, setCardDetails } = useContext(
     AppContext
   ) as AppContextType;
-  // const {formContext, setFormContext} = useContext(AppContext);
-  //console.log(cardDetails);
   let ct: number = 0;
   const router = useRouter();
 
@@ -95,13 +93,7 @@ const FormCard = () => {
               accept="image/*"
               name="Image"
               onChange={(e) => {
-                //use firebase storage to store the image
-                // const storage=getStorage();
-                // const file=e.target.files[0];
-                // console.log(file);
-                // const storageRef=ref(storage,file.name);
-                // uploadBytes(storageRef,file);
-                 const image = e.target.value;
+                const image = e.target.value;
 
                 setPeople((currentPeople) =>
                   produce(currentPeople, (v) => {

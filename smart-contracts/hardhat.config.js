@@ -1,31 +1,16 @@
 require("@nomicfoundation/hardhat-toolbox");
 
+require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
+
+const SEPOLIA_URL = process.env.SEPOLIA_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
 module.exports = {
-  solidity: "0.8.18",
+  solidity: "0.8.9",
   networks: {
-    hardhat: {
-      chainId: 1337,
+    sepolia: {
+      url: SEPOLIA_URL,
+      accounts: [PRIVATE_KEY],
     },
   },
-  paths: {
-    artifacts: "../my-app/contract/artifact"
-  }
 };
-
-// require("@nomicfoundation/hardhat-toolbox");
-
-// require("dotenv").config();
-// /** @type import('hardhat/config').HardhatUserConfig */
-
-// const SEPOLIA_URL = process.env.SEPOLIA_URL;
-// const PRIVATE_KEY = process.env.PRIVATE_KEY;
-// module.exports = {
-//   solidity: "0.8.9",
-//   networks: {
-//     sepolia: {
-//       url: SEPOLIA_URL,
-//       accounts: [PRIVATE_KEY],
-//     },
-//   },
-// };

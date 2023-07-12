@@ -1,22 +1,14 @@
 import React, { useEffect, useState } from 'react'
-import { collection, doc, getDocs, getFirestore, onSnapshot, query, setDoc } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
 
 import Sidebar from '../components/Sidebar/Sidebar';
-import AdminSidebar from '../components/Sidebar/AdminSidebar';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import LinearProgress from '@mui/material/LinearProgress';
-import Button from '@mui/material/Button';
-import Modal from '@mui/material/Modal';
-import Backdrop from '@mui/material/Backdrop';
-import Fade from '@mui/material/Fade';
-import Box from '@mui/material/Box';
 import { db } from '../utils/Firebase';
 import { Divider } from '@mui/material';
 
-import abi from "../contract/artifact/contracts/new_vote.sol/new_vote.json";
+import abi from "../contract/new_vote.json";
 import { ethers } from "ethers";
 
 import {
@@ -78,27 +70,23 @@ function ElectionStats() {
         const getCandidates = await getDocs(
           collection(db, "Elections", election.id, "Candidates")
         );
-        // console.log("election", election.id);
         const candidates = getCandidates.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         }));
         setCardDetails((prev) => [...prev, ...candidates]);
-        // console.log("candidates", candidates);
       });
     };
     getElections();
   },[])
 
-  // console.log(elections)
-  // console.log(cardDetails)
 
   //contract instance
   useEffect(() => {
     
     const connectWallet = async () => {
       try {
-        const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+        const contractAddress = "0xB27DdE2920782f624D1be776D1Cf3B5bE6696fdC";
         const contractABI = abi.abi;
         const provide = new ethers.providers.Web3Provider(ethereum);
         const signer = provide.getSigner();
@@ -126,17 +114,12 @@ function ElectionStats() {
   // getting count of candidates
   useEffect(() => {
 
-    // const votelist = await state.contract.getCountOfVotes("c1761f5b-f481-4924-b011-08b984c653aa","c1fd886c-a6b0-4fd8-a283-84f3055c99e9");
-    // console.log(JSON.parse(votelist))
-    
     const candidateList = async () => {
 
       const candidateData = {};
       
       await Promise.all(
         elections.map(async (doc) => {
-          console.log(doc.id);
-
           const candi = await Promise.all(
             cardDetails.map(async (can) => {
               try {
@@ -153,12 +136,10 @@ function ElectionStats() {
             })
           );
 
-          console.log(candi);
           candidateData[doc.id] = candi.filter((c) => c !== undefined);
         })
       );
 
-      // console.log(candidateData);
       setCandidate(candidateData);
     };
 
@@ -166,12 +147,6 @@ function ElectionStats() {
 
   }, [elections, cardDetails, state.contract])
 
-  console.log(candidate)
-
-  // const votesArray = candidate.map((candidate) => candidate.votes);
-  // const candidateArray = candidate.map((candidate) => candidate.name);
-  // const maxVotes = Math.max(...votesArray);
-//   console.log(maxVotes)
 
   // Calculate total votes
   const totalVotes = (eid) => {
@@ -261,7 +236,6 @@ function ElectionStats() {
           >
             {data.electionTitle}
           </Typography>
-          {console.log(show)}
           {show.name === data.electionTitle && show.open &&
           <Doughnut 
             data={data} 

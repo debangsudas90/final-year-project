@@ -8,7 +8,7 @@ import useAuth from "../hooks/useAuth";
 import Sidebar from "../components/Sidebar/Sidebar";
 import { db, auth } from "../utils/Firebase";
 import { ethers } from "ethers";
-import abi from "../contract/artifact/contracts/new_vote.sol/new_vote.json";
+import abi from "../contract/new_vote.json";
 import Avatar from "react-avatar";
 import Countdown from "../components/Card/Countdown"
 
@@ -58,29 +58,25 @@ function dashboard() {
         const getCandidates = await getDocs(
           collection(db, "Elections", election.id, "Candidates")
         );
-        // console.log("election", election.id);
         const candidates = getCandidates.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         }));
         setCardDetails((prev) => [...prev, ...candidates]);
-        // console.log("candidates", candidates);
       });
     };
     getElections();
     renderButton();
   }, []);
 
-  // console.log("CardDetails", cardDetails);
 
-  //console.log(elections);
   const getProviderOrSigner = async (needSigner = false) => {
     const provider = await web3ModalRef.current.connect();
     const web3Provider = new providers.Web3Provider(provider);
     const { chainId } = await web3Provider.getNetwork();
-    // if (chainId != 11155111) {  //chnage to local network
-    //   alert("Please switch to Sepolia network");
-    // }
+    if (chainId != 11155111) {
+      alert("Please switch to Sepolia network");
+    }
     if (needSigner) {
       const signer = web3Provider.getSigner();
       return signer;
@@ -88,14 +84,14 @@ function dashboard() {
     return web3Provider;
   };
   web3ModalRef.current = new Web3Modal({
-    network: "sepolia",//local net
+    network: "sepolia",
     providerOptions: {},
     disableInjectedProvider: false,
   });
 
   const connectWallet = async () => {
     try {
-      const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+      const contractAddress = "0xB27DdE2920782f624D1be776D1Cf3B5bE6696fdC";
       const contractABI = abi.abi;
       const provide = new ethers.providers.Web3Provider(ethereum);
       const signer = provide.getSigner();

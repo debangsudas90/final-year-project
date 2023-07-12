@@ -62,11 +62,6 @@ function Card({ state, walletConnected, Name, role, indx, eid, title, Email }) {
   const vot = async () => {
     alert("Voting for " + Name);
     try {
-      
-      //console.log(Name, role, contract);
-      // const amount = { value: ethers.utils.parseEther("0.000001") };
-      //contract
-      //indx is the candidate id created by firebase
       const transaction = await contract.giveVote(indx, eid);
       await transaction.wait();
       const noOfVotes = await contract.getCountOfVotes(indx,eid);
